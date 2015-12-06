@@ -32,8 +32,8 @@ struct Player
     int weight;
     float height;
     
-    char* bats;
-    char* throws;
+    char bats;
+    char throws;
     
     char* debut;
     char* finalGame;
@@ -43,6 +43,12 @@ struct Player
     
 };
 
+/***********************************************
+ Description : Does strdup and checks for success.
+ Arguments   : string - the string to be duplicated
+ Returns     : char* - pointer to duplicated string
+ Author      : 
+ *************************************************/
 char* safestrdup(const char* string)
 {
     char* pointer;
@@ -59,4 +65,6 @@ char* safestrdup(const char* string)
 }
 
 player_t* parsePlayer(FILE*);
-void printPlayer(FILE*,player_t*);
+void printPlayer(FILE*,int,player_t**);
+player_t** sortArray(int, player_t*);
+int playerCompare(const void*, const void*);

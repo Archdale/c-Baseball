@@ -5,15 +5,20 @@
 #define PROG_NAME argv[0]
 #define OUTPUT_LOC stdout
 
-
+/***********************************************
+ Description : Program that reads in a pipe-delimited database file
+               and creates a list of entries.
+ Arguments   : argv[1] - the file to be used
+ Returns     : 
+ Author      : 
+ *************************************************/
 int main(int argc,char* argv[])
 {
-
+    char menuOpt = ' ';
     player_t* head = NULL;
     player_t* currentPlayer;
-    char ignore[1024];
-    
-
+    player_t** sortedArray = NULL;
+    int numOfPlayers = -1;
     
     //Too few argument error
     if (argc < NUM_ARGS)
@@ -32,59 +37,132 @@ int main(int argc,char* argv[])
         exit(EXIT_FAILURE);
     }
     
-    fgets(ignore,sizeof(ignore),file);
-    
+    /* 
+    *  While we've not read to the end of our file
+    *  We'll parse a line into a player struct as the current player
+    *  The current player will then have a pointer to the previous player
+    *  And the current will be made the new "head"
+    */
     while(!feof(file))
     {
+        numOfPlayers++;
         currentPlayer = parsePlayer(file);
         currentPlayer->nextPlayer = head;
-        head = currentPlayer;
+        head = currentPlayer;        
     }
     fclose(file);
     
-    printPlayer(OUTPUT_LOC,head);
+    while(menuOpt != 'q')
+    {
+        fprintf(stdout,"Enter:\n");
+        fprintf(stdout,"\tf to find players by name\n");
+        fprintf(stdout,"\tp to print all players sorted by name\n");
+        fprintf(stdout,"\tq to quit\n");
+        fprintf(stdout,">");
+        menuOpt = fgetc(stdin);
+        getc(stdin);
+        
+        switch (menuOpt)
+        {
+            case 'f':
+            {
+                if(sortedArray==NULL)
+                {
+                   sortedArray = sortArray(numOfPlayers,head);
+        
+                }
+                break;
+            }
+            case 'p':
+            {
+                if(sortedArray==NULL)
+                {
+                   sortedArray = sortArray(numOfPlayers,head);
+        
+                }
+                printPlayer(OUTPUT_LOC,numOfPlayers,sortedArray);
+                break;
+            }
+            case 'q':
+            {
+                break;
+            }
+            default:
+            {
+                fprintf(stdout,"<%c> is not a valid option\n",menuOpt);
+                break;
+            }
+        }
+    }
+    
+    // Prints the database out in reverse order from the way it was read
+    
 
     return EXIT_SUCCESS;
 }
 
 
-player_t* parsePlayer(FILE* file)
+player_t** sortArray(int numOfPlayers, player_t* player)
 {
-    int birthYear = 0;
-    int birthMonth = 0;
-    int birthDay = 0;
+    player_t** sortedArray;
+    //int position = 0;
     
-    char* birthCountry = " ";
-    char* birthState = " ";
-    char* birthCity = " ";
-     
-    int deathYear = 0;
-    int deathMonth = 0;
-    int deathDay = 0;
-     
-    char* deathCountry = " ";
-    char* deathState = " ";
-    char* deathCity = " ";
-     
-    char* nameFirst = " ";
-    char* nameLast = " ";
-    char* nameNote = " ";
-    char* nameGiven = " ";
-    char* nameNick = " ";
-     
-    int weight = 0;
-    float height = 0;
-     
-    char* bats = " ";
-    char* throws = " ";
-     
-    char* debut = " ";
-    char* finalGame = " ";
-    char* college = " ";
+    sortedArray = malloc(sizeof(player_t*)*numOfPlayers);
     
+    if(!sortedArray)
+    {
+        fprintf(stderr, "Out of memory");
+        exit(EXIT_FAILURE);
+    }
+    
+    //Skip the null that starts the linked list
+    //player = player->nextPlayer;
+    for(int i = 0; i < (numOfPlayers); i++)
+    {
+        player = player->nextPlayer;
+        sortedArray[i] = player;        
+    }
+    
+    /*for(int i = 0; i < (numOfPlayers-1); i++)
+    {
+        fprintf(stdout,"%s %s\n",(sortedArray[i])->nameFirst,(sortedArray[i])->nameLast);
+    }*/
+    
+    qsort(sortedArray,numOfPlayers,sizeof(player_t*), playerCompare);
+    
+    return sortedArray;
+}
+
+
+int playerCompare(const void* p1, const void* p2)
+{
+    int comparison;
+    if(!(comparison = strcmp((*(player_t**)p1)->nameLast,(*(player_t**)p2)->nameLast)))
+    {
+        comparison = strcmp((*(player_t**)p1)->nameFirst,(*(player_t**)p2)->nameFirst);
+    }
+    
+    return comparison;
+}
+
+/***********************************************
+ Description : Reads in a line of a baseball pipe-delimited
+               baseball database, parsing the values to a struct
+               representing a player.
+ Arguments   : file - the file being parsed
+ Returns     : player_t* - a pointer to the player struct that the
+               data was read into
+ Author      : 
+ *************************************************/
+player_t* parsePlayer(FILE* file)
+{   
     char* endptr;
+    
+    // Buffer to hold the line read
     char buffer[1024];
     
+    // Making room for the player struct, while making sure that we
+    // didn't run out of memmory
     player_t* player;        
     player = malloc(sizeof(player_t));
     if(player==NULL)
@@ -92,130 +170,154 @@ player_t* parsePlayer(FILE* file)
         fprintf(stderr, "Out of memory");
         exit(EXIT_FAILURE);
     }
-       
+    
+    // Read in a line for parsing
     fgets(buffer,sizeof(buffer),file);
 
+    // Check for end of file here, as the previous fgets may have tripped it
     if(!feof(file))
     {
+        /*
+         * The first four entries in the database are related to database
+         * IDs from the database that the file was pulled from
+         * They're tokenized but not stored.
+         */
         strtok(buffer, "|");
         strtok(NULL, "|");
         strtok(NULL, "|");
         strtok(NULL, "|");
             
-        birthYear = strtol(strtok(NULL, "|"),&endptr,10);
-        player->birthYear = birthYear;
-        birthMonth = strtol(strtok(NULL, "|"),&endptr,10); 
-        player->birthMonth = birthMonth;
-        birthDay = strtol(strtok(NULL, "|"),&endptr,10);
-        player->birthDay = birthDay;
+        // Birthday parse
+        player->birthYear = strtol(strtok(NULL, "|"),&endptr,10);
+        player->birthMonth = strtol(strtok(NULL, "|"),&endptr,10); 
+        player->birthDay = strtol(strtok(NULL, "|"),&endptr,10);
         
-        birthCountry = strtok(NULL,"|");
-        player->birthCountry = safestrdup(birthCountry);
-        birthState = strtok(NULL,"|");
-        player->birthState = safestrdup(birthState);
-        birthCity = strtok(NULL,"|");
-        player->birthCity = safestrdup(birthCity);
+        // Birth location parse
+        player->birthCountry = safestrdup(strtok(NULL,"|"));
+        player->birthState = safestrdup(strtok(NULL,"|"));
+        player->birthCity = safestrdup(strtok(NULL,"|"));
         
-        deathYear = strtol(strtok(NULL, "|"),&endptr,10);
-        player->deathYear = deathYear;
-        deathMonth = strtol(strtok(NULL, "|"),&endptr,10); 
-        player->deathMonth = deathMonth;
-        deathDay = strtol(strtok(NULL, "|"),&endptr,10); 
-        player->deathDay = deathDay;
+        // Death day parse
+        player->deathYear = strtol(strtok(NULL, "|"),&endptr,10);
+        player->deathMonth = strtol(strtok(NULL, "|"),&endptr,10); 
+        player->deathDay = strtol(strtok(NULL, "|"),&endptr,10); 
         
-        deathCountry = strtok(NULL,"|");
-        player->deathCountry=safestrdup(deathCountry);
-        deathState = strtok(NULL,"|");
-        player->deathState=safestrdup(deathState);
-        deathCity = strtok(NULL,"|");
-        player->deathCity=safestrdup(deathCity);
+        // Death location parse
+        player->deathCountry=safestrdup(strtok(NULL,"|"));
+        player->deathState=safestrdup(strtok(NULL,"|"));
+        player->deathCity=safestrdup(strtok(NULL,"|"));
         
-        nameFirst = strtok(NULL,"|");
-        player->nameFirst = safestrdup(nameFirst);
-        nameLast = strtok(NULL,"|");
-        player->nameLast = safestrdup(nameLast);
-        nameNote = strtok(NULL,"|");
-        player->nameNote = safestrdup(nameNote);
-        nameGiven = strtok(NULL,"|");
-        player->nameGiven = safestrdup(nameGiven);
-        nameNick = strtok(NULL,"|");
-        player->nameNick = safestrdup(nameNick);
+        // Name related parses
+        player->nameFirst = safestrdup(strtok(NULL,"|"));
+        player->nameLast = safestrdup(strtok(NULL,"|"));
+        player->nameNote = safestrdup(strtok(NULL,"|"));
+        player->nameGiven = safestrdup(strtok(NULL,"|"));
+        player->nameNick = safestrdup(strtok(NULL,"|"));
         
-        weight = (int)strtol(strtok(NULL, "|"),&endptr,10);
-        player->weight = weight;
-        height = strtof(strtok(NULL, "|"),&endptr);
-        player->height = height;
+        // Weight and height parse
+        player->weight = (int)strtol(strtok(NULL, "|"),&endptr,10);
+        player->height = strtof(strtok(NULL, "|"),&endptr);
 
-        bats = strtok(NULL,"|");
-        player->bats = safestrdup(bats);
-        throws = strtok(NULL,"|");
-        player->throws = safestrdup(throws);
-
-        debut = strtok(NULL,"|");
-        player->debut = safestrdup(debut);
-        finalGame = strtok(NULL,"|");
-        player->finalGame = safestrdup(finalGame);
-        college = strtok(NULL,"|");
-        player->college = safestrdup(college);
+        // Handedness parse
+        player->bats = ((char*)strtok(NULL,"|"))[0];
+        player->throws = ((char*)strtok(NULL,"|"))[0];
+    
+        // Debut/Final Game, and college parse
+        player->debut = safestrdup(strtok(NULL,"|"));
+        player->finalGame = safestrdup(strtok(NULL,"|"));
+        player->college = safestrdup(strtok(NULL,"|"));
     }
     return player;
 }
 
 
-void printPlayer(FILE* output,player_t* player)
+/***********************************************
+ Description : Prints out a database of player entries
+ Arguments   : output - where to print the database entries
+               player - the first entry in the database
+ Returns     : 
+ Author      : 
+ *************************************************/
+void printPlayer(FILE* output, int numOfPlayers, player_t** sortedArray)
 {
-    while(NULL!=(player = player->nextPlayer))
+    // While the current player has a next player, we'll print the
+    // values of that player struct.
+    // It only prints the values that have valid information, other
+    // than name, which always prints.
+    for(int i = 0; i < numOfPlayers; i++)
     {
-        fprintf(output,"%12.12s %s %s\n","Name:",player->nameFirst,player->nameLast);
-        if(player->nameGiven[0] != ' ')
+        // Name related prints
+        fprintf(output,"%-13.13s: %s %s\n","Name",sortedArray[i]->nameFirst,
+                                                  sortedArray[i]->nameLast);
+        if(sortedArray[i]->nameGiven[0] != ' ')
         {
-            fprintf(output,"%12.12s %s\n","Given Name:",player->nameGiven);
+            fprintf(output,"%-13.13s: %s\n","Given Name",sortedArray[i]->nameGiven);
         }
-        if(player->nameNick[0] != ' ')
+        if(sortedArray[i]->nameNick[0] != ' ')
         {
-            fprintf(output,"%12.12s %s\n", "Nickname(s):",player->nameNick);
+            fprintf(output,"%-13.13s: %s\n", "Nickname(s)",sortedArray[i]->nameNick);
         }
-        if(player->nameNote[0] != ' ')
+        if(sortedArray[i]->nameNote[0] != ' ')
         {
-            fprintf(output,"%12.12s %s\n", "Name notes:",player->nameNote);
+            fprintf(output,"%-13.13s: %s\n", "Name notes",sortedArray[i]->nameNote);
         }
-        if(player->height)
+        
+        // Statistical data prints
+        if(sortedArray[i]->height)
         {
-            fprintf(output,"%12.12s %.1f\n","Height:",player->height);
+            fprintf(output,"%-13.13s: %.1f\n","Height",sortedArray[i]->height);
         }
-        if(player->weight)
+        if(sortedArray[i]->weight)
         {
-            fprintf(output,"%12.12s %d\n","Weight:",player->weight);
+            fprintf(output,"%-13.13s: %d\n","Weight",sortedArray[i]->weight);
         }
-        if(player->bats[0] != ' ')
+        if(sortedArray[i]->bats != ' ')
         {
-            fprintf(output,"%12.12s %s\n","Bats:",player->bats);
+            fprintf(output,"%-13.13s: %c\n","Bats",sortedArray[i]->bats);
         }
-        if(player->throws[0] != ' ')
+        if(sortedArray[i]->throws != ' ')
         {
-            fprintf(output,"%12.12s %s\n","Throws:",player->throws);
+            fprintf(output,"%-13.13s: %c\n","Throws",sortedArray[i]->throws);
         }
-        if(player->birthMonth != 0)
+        
+        // Birthday related prints
+        if(sortedArray[i]->birthMonth != 0)
         {
-            fprintf(output,"%12.12s %d/%d/%d\n", "Birthday:",player->birthMonth,player->birthDay,player->birthYear);
-            fprintf(output,"%12.12s %s, %s, %s\n","Born in:",player->birthCity,player->birthState,player->birthCountry);
+            fprintf(output,"%-13.13s: %d/%d/%d\n","Birthday"
+                                                 ,sortedArray[i]->birthMonth
+                                                 ,sortedArray[i]->birthDay
+                                                 ,sortedArray[i]->birthYear);
+            fprintf(output,"%-13.13s: %s, %s, %s\n","Born in"
+                                                   ,sortedArray[i]->birthCity
+                                                   ,sortedArray[i]->birthState
+                                                   ,sortedArray[i]->birthCountry);
         }
-        if(player->deathMonth != 0)
+        
+        // Death day related prints
+        if(sortedArray[i]->deathMonth != 0)
         {
-            fprintf(output,"%12.12s %d/%d/%d\n", "Died on:",player->deathMonth,player->deathDay,player->deathYear);
-            fprintf(output,"%12.12s %s, %s, %s\n", "Died in:",player->deathCity,player->deathState,player->deathCountry);
+            fprintf(output,"%-13.13s: %d/%d/%d\n","Died on"
+                                                 ,sortedArray[i]->deathMonth
+                                                 ,sortedArray[i]->deathDay
+                                                 ,sortedArray[i]->deathYear);
+            fprintf(output,"%-13.13s: %s, %s, %s\n","Died in"
+                                                   ,sortedArray[i]->deathCity
+                                                   ,sortedArray[i]->deathState
+                                                   ,sortedArray[i]->deathCountry);
         }
-        if(player->college[0] != ' ')
+        
+        // College, debut and final game prints
+        if(sortedArray[i]->college[0] != ' ')
         {
-            fprintf(output,"%12.12s %s\n","College:",player->college);
+            fprintf(output,"%-13.13s: %s\n","College",sortedArray[i]->college);
         }
-        if(player->debut[0] != ' ')
+        if(sortedArray[i]->debut[0] != ' ')
         {
-            fprintf(output,"%12.12s %s\n","Debut Game:",player->debut);
+            fprintf(output,"%-13.13s: %s\n","Debut Game",sortedArray[i]->debut);
         }
-        if(player->finalGame[0] != ' ')
+        if(sortedArray[i]->finalGame[0] != ' ')
         {
-            fprintf(output,"%12.12s %s\n","Final Game:",player->finalGame);
+            fprintf(output,"%-13.13s: %s\n","Final Game",sortedArray[i]->finalGame);
         }
         fprintf(output,"\n");
     }
