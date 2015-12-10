@@ -1,7 +1,4 @@
-#include <stdio.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stdio.h>  //Needed for parsePlayer prototype, and other files
 
 typedef struct Player player_t;
 
@@ -43,7 +40,10 @@ struct Player
     
 };
 
+extern char* safestrdup(const char*);
 extern player_t* parsePlayer(FILE*);
-void printPlayer(FILE*,int,player_t**);
-player_t** sortArray(int, player_t*);
-int playerCompare(const void*, const void*);
+extern void printPlayer(FILE*,player_t*);
+extern player_t** sortArray(int, player_t*);
+extern int playerCompare(const void*, const void*);
+extern player_t** findPlayer(char*, player_t*);
+extern int playerCompareLast(const void*, const void*);

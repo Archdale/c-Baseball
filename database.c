@@ -1,22 +1,30 @@
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 #include "definitions.h"
+
 
 #define NUM_ARGS 2
 #define USAGE "%s <database.dat>\n"
-#define PROG_NAME argv[0]
-#define OUTPUT_LOC stdout
+
 
 /***********************************************
  Description : Program that reads in a pipe-delimited database file
                and creates a list of entries.
- Arguments   : argv[1] - the file to be used
+ Arguments   : int argc - the number of arguments
+               char* argv[1] - the file to be used
  Returns     : 
  Author      : 
  *************************************************/
 int main(int argc,char* argv[])
 {
+    FILE* filePointer;
     char menuOpt = ' ';
+    char* playerName;
+    char findBuffer[80];
     player_t* head = NULL;
     player_t* currentPlayer;
+    player_t** foundPlayers = NULL;
     player_t** sortedArray = NULL;
     int numOfPlayers = -1;
     
@@ -24,16 +32,16 @@ int main(int argc,char* argv[])
     if (argc < NUM_ARGS)
     {
         fprintf(stderr, "Too few arguments\n");
-        fprintf(stdout, USAGE, PROG_NAME);
+        fprintf(stdout, USAGE, argv[0]);
         exit(EXIT_FAILURE);
     }
 
     // File doesn't exist error
-    FILE* file = fopen(argv[1], "rb");
+    filePointer = fopen(argv[1], "rb");
     if (errno)
     {
         fprintf(stderr, "File doesn't exist\n");
-        fprintf(stdout, USAGE, PROG_NAME);
+        fprintf(stdout, USAGE, argv[0]);
         exit(EXIT_FAILURE);
     }
     
@@ -43,199 +51,105 @@ int main(int argc,char* argv[])
     *  The current player will then have a pointer to the previous player
     *  And the current will be made the new "head"
     */
-    while(!feof(file))
+    while(!feof(filePointer))
     {
         numOfPlayers++;
-        currentPlayer = parsePlayer(file);
+        currentPlayer = parsePlayer(filePointer);
         currentPlayer->nextPlayer = head;
         head = currentPlayer;        
     }
-    fclose(file);
+    fclose(filePointer);
     
+    // While the user hasn't hit q for quit to leave the menu, repeat the menu
     while(menuOpt != 'q')
     {
         fprintf(stdout,"Enter:\n");
-        fprintf(stdout,"\tf to find players by name\n");
+        fprintf(stdout,"\tf to find players by last name\n");
         fprintf(stdout,"\tp to print all players sorted by name\n");
         fprintf(stdout,"\tq to quit\n");
         fprintf(stdout,">");
+        
+        // Get user input and eat the newline character
         menuOpt = fgetc(stdin);
         getc(stdin);
         
+        
         switch (menuOpt)
         {
+            // Find option
             case 'f':
             {
-                if(sortedArray==NULL)
+                fprintf(stdout,"\nEnter Last Name:\n");
+                fprintf(stdout,">");
+
+                // Gets input from the user, tokenizes it to remove the new line
+                // and duplicates it so that it is allocated.
+                fgets(findBuffer, 80, stdin);
+                playerName = safestrdup(strtok(findBuffer,"\n"));               
+                fprintf(stdout,"\n");
+                
+                
+                foundPlayers = findPlayer(playerName,head);
+                // If we found players matching the name, we want to print them,
+                // otherwise we want to print that no players were found.
+                if(foundPlayers)
                 {
-                   sortedArray = sortArray(numOfPlayers,head);
-        
+                    for(int i = 0; foundPlayers[i]; i++)
+                    {
+                        
+                        printPlayer(stdout,(player_t*)foundPlayers[i]);
+                    }
+                    
+                    // After printing, we want to free the array of players
+                    // And set it to null, so we don't try to use it again.
+                    free(foundPlayers);
+                    foundPlayers = NULL;
                 }
+                else
+                {
+                    fprintf(stdout,"No players with that name.\n\n");
+                }
+                // Also free the name we allocated space for.
+                free(playerName);
                 break;
             }
+            
+            // Print option
             case 'p':
             {
+                // If the array isn't sorted, we want to sort it and save it
+                // So next time we use it, its already sorted.
                 if(sortedArray==NULL)
                 {
-                   sortedArray = sortArray(numOfPlayers,head);
-        
+                   sortedArray = sortArray(numOfPlayers,head);        
                 }
-                printPlayer(OUTPUT_LOC,numOfPlayers,sortedArray);
+                
+                // Iterates through the array of players, which is now sorted 
+                // alphabetcially by last name, then first name.
+                for(int i = 0; i < numOfPlayers; i++)
+                {
+                    printPlayer(stdout,(player_t*)sortedArray[i]);
+                }
                 break;
             }
+            
+            // Quit option
             case 'q':
             {
                 break;
             }
+            
+            // Any other entry
             default:
             {
                 fprintf(stdout,"<%c> is not a valid option\n",menuOpt);
                 break;
             }
         }
-    }
-    
-    // Prints the database out in reverse order from the way it was read
-    
+    }  
 
     return EXIT_SUCCESS;
 }
 
 
-player_t** sortArray(int numOfPlayers, player_t* player)
-{
-    player_t** sortedArray;
-    //int position = 0;
-    
-    sortedArray = malloc(sizeof(player_t*)*numOfPlayers);
-    
-    if(!sortedArray)
-    {
-        fprintf(stderr, "Out of memory");
-        exit(EXIT_FAILURE);
-    }
-    
-    //Skip the null that starts the linked list
-    //player = player->nextPlayer;
-    for(int i = 0; i < (numOfPlayers); i++)
-    {
-        player = player->nextPlayer;
-        sortedArray[i] = player;        
-    }
-    
-    /*for(int i = 0; i < (numOfPlayers-1); i++)
-    {
-        fprintf(stdout,"%s %s\n",(sortedArray[i])->nameFirst,(sortedArray[i])->nameLast);
-    }*/
-    
-    qsort(sortedArray,numOfPlayers,sizeof(player_t*), playerCompare);
-    
-    return sortedArray;
-}
 
-
-int playerCompare(const void* p1, const void* p2)
-{
-    int comparison;
-    if(!(comparison = strcmp((*(player_t**)p1)->nameLast,(*(player_t**)p2)->nameLast)))
-    {
-        comparison = strcmp((*(player_t**)p1)->nameFirst,(*(player_t**)p2)->nameFirst);
-    }
-    
-    return comparison;
-}
-
-
-
-
-/***********************************************
- Description : Prints out a database of player entries
- Arguments   : output - where to print the database entries
-               player - the first entry in the database
- Returns     : 
- Author      : 
- *************************************************/
-void printPlayer(FILE* output, int numOfPlayers, player_t** sortedArray)
-{
-    // While the current player has a next player, we'll print the
-    // values of that player struct.
-    // It only prints the values that have valid information, other
-    // than name, which always prints.
-    for(int i = 0; i < numOfPlayers; i++)
-    {
-        // Name related prints
-        fprintf(output,"%-13.13s: %s %s\n","Name",sortedArray[i]->nameFirst,
-                                                  sortedArray[i]->nameLast);
-        if(sortedArray[i]->nameGiven[0] != ' ')
-        {
-            fprintf(output,"%-13.13s: %s\n","Given Name",sortedArray[i]->nameGiven);
-        }
-        if(sortedArray[i]->nameNick[0] != ' ')
-        {
-            fprintf(output,"%-13.13s: %s\n", "Nickname(s)",sortedArray[i]->nameNick);
-        }
-        if(sortedArray[i]->nameNote[0] != ' ')
-        {
-            fprintf(output,"%-13.13s: %s\n", "Name notes",sortedArray[i]->nameNote);
-        }
-        
-        // Statistical data prints
-        if(sortedArray[i]->height)
-        {
-            fprintf(output,"%-13.13s: %.1f\n","Height",sortedArray[i]->height);
-        }
-        if(sortedArray[i]->weight)
-        {
-            fprintf(output,"%-13.13s: %d\n","Weight",sortedArray[i]->weight);
-        }
-        if(sortedArray[i]->bats != ' ')
-        {
-            fprintf(output,"%-13.13s: %c\n","Bats",sortedArray[i]->bats);
-        }
-        if(sortedArray[i]->throws != ' ')
-        {
-            fprintf(output,"%-13.13s: %c\n","Throws",sortedArray[i]->throws);
-        }
-        
-        // Birthday related prints
-        if(sortedArray[i]->birthMonth != 0)
-        {
-            fprintf(output,"%-13.13s: %d/%d/%d\n","Birthday"
-                                                 ,sortedArray[i]->birthMonth
-                                                 ,sortedArray[i]->birthDay
-                                                 ,sortedArray[i]->birthYear);
-            fprintf(output,"%-13.13s: %s, %s, %s\n","Born in"
-                                                   ,sortedArray[i]->birthCity
-                                                   ,sortedArray[i]->birthState
-                                                   ,sortedArray[i]->birthCountry);
-        }
-        
-        // Death day related prints
-        if(sortedArray[i]->deathMonth != 0)
-        {
-            fprintf(output,"%-13.13s: %d/%d/%d\n","Died on"
-                                                 ,sortedArray[i]->deathMonth
-                                                 ,sortedArray[i]->deathDay
-                                                 ,sortedArray[i]->deathYear);
-            fprintf(output,"%-13.13s: %s, %s, %s\n","Died in"
-                                                   ,sortedArray[i]->deathCity
-                                                   ,sortedArray[i]->deathState
-                                                   ,sortedArray[i]->deathCountry);
-        }
-        
-        // College, debut and final game prints
-        if(sortedArray[i]->college[0] != ' ')
-        {
-            fprintf(output,"%-13.13s: %s\n","College",sortedArray[i]->college);
-        }
-        if(sortedArray[i]->debut[0] != ' ')
-        {
-            fprintf(output,"%-13.13s: %s\n","Debut Game",sortedArray[i]->debut);
-        }
-        if(sortedArray[i]->finalGame[0] != ' ')
-        {
-            fprintf(output,"%-13.13s: %s\n","Final Game",sortedArray[i]->finalGame);
-        }
-        fprintf(output,"\n");
-    }
-}
