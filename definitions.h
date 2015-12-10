@@ -43,28 +43,7 @@ struct Player
     
 };
 
-/***********************************************
- Description : Does strdup and checks for success.
- Arguments   : string - the string to be duplicated
- Returns     : char* - pointer to duplicated string
- Author      : 
- *************************************************/
-char* safestrdup(const char* string)
-{
-    char* pointer;
-    errno = 0;
-    
-    pointer = strdup(string);
-    if(errno)
-    {
-        fprintf(stderr, "Out of memory");
-        exit(EXIT_FAILURE);
-    }
-    
-    return pointer;
-}
-
-player_t* parsePlayer(FILE*);
+extern player_t* parsePlayer(FILE*);
 void printPlayer(FILE*,int,player_t**);
 player_t** sortArray(int, player_t*);
 int playerCompare(const void*, const void*);
