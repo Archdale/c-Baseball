@@ -90,11 +90,14 @@ int main(int argc,char* argv[])
                 playerName = safestrdup(strtok(findBuffer,"\n"));               
                 fprintf(stdout,"\n");
                 
+                // If we don't have a sorted array of entries, do a
+                // linear search
                 if(!sortedArray)
                 {
                     foundPlayers = findPlayer(playerName,head);
-                    // If we found players matching the name, we want to print them,
-                    // otherwise we want to print that no players were found.
+                    // If we found players matching the name, we want to print 
+                    // them, otherwise we want to print that no players were 
+                    // found.
                     if(foundPlayers)
                     {
                         for(int i = 0; foundPlayers[i]; i++)
@@ -115,14 +118,23 @@ int main(int argc,char* argv[])
                     // Also free the name we allocated space for.
                     free(playerName);
                 }
+                
+                // Else we do have a sorted list, so we can do a binary search of
+                // the player we're looking for
                 else
                 {
-                   if((foundPlayer = getFirstMatch(playerName, sortedArray, numOfPlayers))) 
+                   if((foundPlayer = 
+                       getFirstMatch(playerName, sortedArray, numOfPlayers))) 
                    {
-                       
-                       while(!strcmp((*foundPlayer)->nameLast,playerName) && !endOfArray)
+                       // While the current player has the last name we're
+                       // looking for, print it out
+                       while(!strcmp((*foundPlayer)->nameLast,playerName) 
+                             && !endOfArray)
                        {
                            printPlayer(stdout,*(foundPlayer));
+                           // Boundary case is if we hit the end of the array,
+                           // we don't want to step past the end of the array or
+                           // will SEGV
                            if(foundPlayer == (sortedArray + numOfPlayers -1))
                            {
                                endOfArray = 1;
@@ -132,6 +144,7 @@ int main(int argc,char* argv[])
                                foundPlayer++;
                            }
                        }
+                       endOfArray = 0;
                    }
                    else
                    {

@@ -40,25 +40,50 @@ player_t** findPlayer(char* name, player_t* player)
 }
 
 
+/***********************************************
+ Description : Finds players matching a last name in a database
+ Arguments   : char* name - the name being searched for             
+               player_t** player - the sorted list of players to be searched
+ Returns     : player_t** - the first matching player
+ Author      : 
+ *************************************************/
 player_t** getFirstMatch(char* name, player_t** sortedPlayers, int numOfPlayers)
 {
+    char beginOfArray = 0;
     player_t* comparePlayer = NULL;
     player_t** searchPlayerPtr = NULL;
     comparePlayer = malloc(sizeof(player_t));
     comparePlayer->nameLast = name;
     
-    searchPlayerPtr = (player_t**) bsearch(&comparePlayer, sortedPlayers, numOfPlayers, sizeof(player_t*), playerCompareLast);
+    
+    // Finds 
+    searchPlayerPtr = (player_t**) bsearch(&comparePlayer, 
+                                           sortedPlayers, 
+                                           numOfPlayers, 
+                                           sizeof(player_t*), 
+                                           playerCompareLast);
     if(searchPlayerPtr)
     {
-        while(((&searchPlayerPtr - 1) > (&sortedPlayers)) && !strcmp((*(searchPlayerPtr))->nameLast,name))
+        // While the name is the same and we're not at the beginning of the 
+        // sorted array
+        while(!strcmp((*(searchPlayerPtr))->nameLast,name) && !beginOfArray)
         {
-
-            searchPlayerPtr--;
-          
+            if(searchPlayerPtr == sortedPlayers)
+            {
+                beginOfArray = 1;
+            }
+            else
+            {
+                searchPlayerPtr--;
+            }
         }
-        searchPlayerPtr++;        
+        // If we didn't hit the beginning of the array, we need to increment our
+        // pointer so its on the first entry for the searched name
+        if(!beginOfArray)
+        {
+            searchPlayerPtr++;        
+        }
     }
-    
     free(comparePlayer);
     return searchPlayerPtr;
 }
