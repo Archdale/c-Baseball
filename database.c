@@ -24,9 +24,11 @@ int main(int argc,char* argv[])
     char findBuffer[80];
     player_t* head = NULL;
     player_t* currentPlayer;
+    player_t** foundPlayer;
     player_t** foundPlayers = NULL;
     player_t** sortedArray = NULL;
     int numOfPlayers = -1;
+    char endOfArray = 0;
     
     //Too few argument error
     if (argc < NUM_ARGS)
@@ -88,29 +90,54 @@ int main(int argc,char* argv[])
                 playerName = safestrdup(strtok(findBuffer,"\n"));               
                 fprintf(stdout,"\n");
                 
-                
-                foundPlayers = findPlayer(playerName,head);
-                // If we found players matching the name, we want to print them,
-                // otherwise we want to print that no players were found.
-                if(foundPlayers)
+                if(!sortedArray)
                 {
-                    for(int i = 0; foundPlayers[i]; i++)
+                    foundPlayers = findPlayer(playerName,head);
+                    // If we found players matching the name, we want to print them,
+                    // otherwise we want to print that no players were found.
+                    if(foundPlayers)
                     {
+                        for(int i = 0; foundPlayers[i]; i++)
+                        {
+                            
+                            printPlayer(stdout,(player_t*)foundPlayers[i]);
+                        }
                         
-                        printPlayer(stdout,(player_t*)foundPlayers[i]);
+                        // After printing, we want to free the array of players
+                        // And set it to null, so we don't try to use it again.
+                        free(foundPlayers);
+                        foundPlayers = NULL;
                     }
-                    
-                    // After printing, we want to free the array of players
-                    // And set it to null, so we don't try to use it again.
-                    free(foundPlayers);
-                    foundPlayers = NULL;
+                    else
+                    {
+                        fprintf(stdout,"No players with that name.\n\n");
+                    }
+                    // Also free the name we allocated space for.
+                    free(playerName);
                 }
                 else
                 {
-                    fprintf(stdout,"No players with that name.\n\n");
+                   if((foundPlayer = getFirstMatch(playerName, sortedArray, numOfPlayers))) 
+                   {
+                       
+                       while(!strcmp((*foundPlayer)->nameLast,playerName) && !endOfArray)
+                       {
+                           printPlayer(stdout,*(foundPlayer));
+                           if(foundPlayer == (sortedArray + numOfPlayers -1))
+                           {
+                               endOfArray = 1;
+                           }
+                           else
+                           {
+                               foundPlayer++;
+                           }
+                       }
+                   }
+                   else
+                   {
+                       fprintf(stdout,"No players with that name.\n\n");
+                   }
                 }
-                // Also free the name we allocated space for.
-                free(playerName);
                 break;
             }
             
@@ -119,7 +146,7 @@ int main(int argc,char* argv[])
             {
                 // If the array isn't sorted, we want to sort it and save it
                 // So next time we use it, its already sorted.
-                if(sortedArray==NULL)
+                if(!sortedArray)
                 {
                    sortedArray = sortArray(numOfPlayers,head);        
                 }

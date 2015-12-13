@@ -38,3 +38,27 @@ player_t** findPlayer(char* name, player_t* player)
     
     return foundPlayers;
 }
+
+
+player_t** getFirstMatch(char* name, player_t** sortedPlayers, int numOfPlayers)
+{
+    player_t* comparePlayer = NULL;
+    player_t** searchPlayerPtr = NULL;
+    comparePlayer = malloc(sizeof(player_t));
+    comparePlayer->nameLast = name;
+    
+    searchPlayerPtr = (player_t**) bsearch(&comparePlayer, sortedPlayers, numOfPlayers, sizeof(player_t*), playerCompareLast);
+    if(searchPlayerPtr)
+    {
+        while(((&searchPlayerPtr - 1) > (&sortedPlayers)) && !strcmp((*(searchPlayerPtr))->nameLast,name))
+        {
+
+            searchPlayerPtr--;
+          
+        }
+        searchPlayerPtr++;        
+    }
+    
+    free(comparePlayer);
+    return searchPlayerPtr;
+}

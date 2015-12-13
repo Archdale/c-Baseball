@@ -51,10 +51,23 @@ int playerCompare(const void* p1, const void* p2)
 {
     int comparison;
     // If the last name is same, then compare the first names
-    if(!(comparison = strcasecmp((*(player_t**)p1)->nameLast,(*(player_t**)p2)->nameLast)))
+    if(!(comparison = playerCompareLast(p1,p2)))
     {
         comparison = strcasecmp((*(player_t**)p1)->nameFirst,(*(player_t**)p2)->nameFirst);
     }
     
     return comparison;
+}
+
+
+/***********************************************
+ Description : 
+ Arguments   : 
+               
+ Returns     :
+ Author      : 
+ *************************************************/
+int playerCompareLast(const void* p1, const void* p2)
+{   
+    return strcasecmp((*(player_t**)p1)->nameLast,(*(player_t**)p2)->nameLast);
 }

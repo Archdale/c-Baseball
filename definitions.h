@@ -47,3 +47,4 @@ extern player_t** sortArray(int, player_t*);
 extern int playerCompare(const void*, const void*);
 extern player_t** findPlayer(char*, player_t*);
 extern int playerCompareLast(const void*, const void*);
+extern player_t** getFirstMatch(char*, player_t**, int);
